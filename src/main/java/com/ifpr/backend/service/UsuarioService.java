@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import com.ifpr.backend.dto.UsuarioCadastroDTO;
 import com.ifpr.backend.dto.UsuarioRespostaDTO;
 import com.ifpr.backend.entity.Usuario;
+import com.ifpr.backend.exception.BusinessException;
 import com.ifpr.backend.repository.UsuarioRepository;
 
 @Service 
@@ -28,7 +29,7 @@ public class UsuarioService {
         String email = dto.email().trim().toLowerCase();
 
         if (usuarioRepository.existsByEmailIgnoreCase(email)) {
-            throw new RuntimeException("E-mail já cadastrado");
+            throw new BusinessException("E-mail já cadastrado");
         }
 
         Usuario usuario = new Usuario();
