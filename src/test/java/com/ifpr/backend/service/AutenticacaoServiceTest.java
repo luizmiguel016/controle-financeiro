@@ -18,12 +18,16 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.ifpr.backend.dto.UsuarioLoginDTO;
 import com.ifpr.backend.entity.Usuario;
 import com.ifpr.backend.repository.UsuarioRepository;
+import com.ifpr.backend.security.JwtService;
 
 @ExtendWith(MockitoExtension.class)
 public class AutenticacaoServiceTest {
     
     @Mock
     private UsuarioRepository usuarioRepository;
+
+    @Mock 
+    private JwtService jwtService;
 
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -33,7 +37,8 @@ public class AutenticacaoServiceTest {
     void preparar() {
         autenticacaoService = new AutenticacaoService(
                 usuarioRepository,
-                passwordEncoder   
+                passwordEncoder,
+                jwtService
         );
     }
 
