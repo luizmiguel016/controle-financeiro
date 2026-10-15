@@ -15,7 +15,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErroResposta> tratarBusinessException(BusinessException ex) {
 
-        return criarResposta(HttpStatus.CONFLICT, ex.getMessage());
+        return criarResposta(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
     }
 
     @ExceptionHandler(BadCredentialsException.class)
@@ -41,6 +41,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErroResposta> tratarException(Exception ex) {
 
         return criarResposta(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno do servidor");
+    }
+
+    @ExceptionHandler(ConflitoException.class)
+    public ResponseEntity<ErroResposta> tratarConflito(ConflitoException ex) {
+        
+        return criarResposta(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     private ResponseEntity<ErroResposta> criarResposta(HttpStatus status, String mensagem) {
