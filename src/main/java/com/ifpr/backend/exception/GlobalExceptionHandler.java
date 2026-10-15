@@ -9,42 +9,23 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice
+@RestControllerAdvice 
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ErroResposta> tratarBusinessException(
-            BusinessException ex) {
+    public ResponseEntity<ErroResposta> tratarBusinessException(BusinessException ex) {
 
-        ErroResposta erro = new ErroResposta(
-                HttpStatus.CONFLICT.value(),
-                ex.getMessage(),
-                LocalDateTime.now()
-        );
-
-        return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(erro);
+        return criarResposta(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ErroResposta> tratarCredenciaisInvalidas(
-            BadCredentialsException ex) {
-
-        ErroResposta erro = new ErroResposta(
-                HttpStatus.UNAUTHORIZED.value(),
-                "E-mail ou senha inválidos",
-                LocalDateTime.now()
-        );
-
-        return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
-                .body(erro);
+    public ResponseEntity<ErroResposta> tratarCredenciaisInvalidas(BadCredentialsException ex) {
+        
+        return criarResposta(HttpStatus.UNAUTHORIZED, "E-mail ou senha inválidos");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErroResposta> tratarValidacao(
-            MethodArgumentNotValidException ex) {
+    public ResponseEntity<ErroResposta> tratarValidacao(MethodArgumentNotValidException ex) {
 
         String mensagem = ex.getBindingResult()
                 .getFieldErrors()
@@ -53,28 +34,21 @@ public class GlobalExceptionHandler {
                 .map(erro -> erro.getDefaultMessage())
                 .orElse("Dados inválidos");
 
-        ErroResposta erro = new ErroResposta(
-                HttpStatus.BAD_REQUEST.value(),
-                mensagem,
-                LocalDateTime.now()
-        );
-
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(erro);
+        return criarResposta(HttpStatus.BAD_REQUEST, mensagem);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErroResposta> tratarException(Exception ex) {
 
-        ErroResposta erro = new ErroResposta(
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "Erro interno do servidor",
-                LocalDateTime.now()
-        );
+        return criarResposta(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno do servidor");
+    }
+
+    private ResponseEntity<ErroResposta> criarResposta(HttpStatus status, String mensagem) {
+
+        ErroResposta erro = new ErroResposta(LocalDateTime.now(), status.value(), status.getReasonPhrase(), mensagem);
 
         return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .status(status)
                 .body(erro);
     }
 }
