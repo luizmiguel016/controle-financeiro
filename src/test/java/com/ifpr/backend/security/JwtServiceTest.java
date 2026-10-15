@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.ifpr.backend.entity.Usuario;
+import com.ifpr.backend.entity.User;
 
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -16,70 +16,73 @@ import io.jsonwebtoken.io.Encoders;
 class JwtServiceTest {
 
     private JwtService jwtService;
-    private String segredoBase64;
+    private String base64Secret;
 
     @BeforeEach
-    void preparar() {
+    void setUp() {
 
-        segredoBase64 = Encoders.BASE64.encode(
+        base64Secret = Encoders.BASE64.encode(
                 Jwts.SIG.HS256.key().build().getEncoded()
         );
 
-        jwtService = new JwtService(segredoBase64, 60000);
+        jwtService = new JwtService(base64Secret, 60000);
     }
 
     @Test
-    void deveGerarTokenValidoParaUsuario() {
+    void shouldGenerateValidTokenForUser() {
 
-        Usuario usuario = new Usuario();
-        usuario.setId(1L);
-        usuario.setEmail("luiz@email.com");
+        User user = new User();
+        user.setId(1L);
+        user.setEmail("luiz@email.com");
 
-        String token = jwtService.gerarToken(usuario);
+        String token = jwtService.generateToken(user);
 
-        Long idExtraido = jwtService.extrairIdUsuario(token);
+        Long extractedId = jwtService.extractUserId(token);
 
-        assertEquals(1L, idExtraido);
+        assertEquals(1L, extractedId);
     }
 
     @Test
-    void deveRejeitarTokenComAssinaturaInvalida() {
+    void shouldRejectTokenWithInvalidSignature() {
 
-        Usuario usuario = new Usuario();
-        usuario.setId(1L);
-        usuario.setEmail("luiz@email.com");
+        User user = new User();
+        user.setId(1L);
+        user.setEmail("luiz@email.com");
 
-        String token = jwtService.gerarToken(usuario);
+        String token = jwtService.generateToken(user);
 
-        String outraChave = Encoders.BASE64.encode(
+        String anotherSecret = Encoders.BASE64.encode(
                 Jwts.SIG.HS256.key().build().getEncoded()
         );
 
-        JwtService outroJwtService = new JwtService(outraChave, 60000);
+        JwtService anotherJwtService = new JwtService(
+                anotherSecret,
+                60000
+        );
 
         assertThrows(
                 JwtException.class,
-                () -> outroJwtService.extrairIdUsuario(token)
+                () -> anotherJwtService.extractUserId(token)
         );
     }
 
     @Test
-    void deveRejeitarTokenExpirado() {
+    void shouldRejectExpiredToken() {
 
-        JwtService servicoExpirado = new JwtService(
-                segredoBase64,
+        JwtService expiredJwtService = new JwtService(
+                base64Secret,
                 -1000
         );
 
-        Usuario usuario = new Usuario();
-        usuario.setId(1L);
-        usuario.setEmail("luiz@email.com");
+        User user = new User();
+        user.setId(1L);
+        user.setEmail("luiz@email.com");
 
-        String token = servicoExpirado.gerarToken(usuario);
+        String token = expiredJwtService.generateToken(user);
 
         assertThrows(
                 ExpiredJwtException.class,
-                () -> jwtService.extrairIdUsuario(token)
+                () -> jwtService.extractUserId(token)
         );
     }
 }

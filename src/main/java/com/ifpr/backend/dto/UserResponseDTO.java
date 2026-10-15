@@ -2,10 +2,10 @@ package com.ifpr.backend.dto;
 
 import java.time.LocalDateTime;
 
-public record UsuarioRespostaDTO(
+public record UserResponseDTO(
         Long id,
-        String nome,
+        String name,
         String email,
-        LocalDateTime criadoEm
+        LocalDateTime createdAt
 ) {
 }

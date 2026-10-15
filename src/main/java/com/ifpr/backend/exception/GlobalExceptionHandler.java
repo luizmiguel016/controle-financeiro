@@ -9,52 +9,79 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice 
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ErroResposta> tratarBusinessException(BusinessException ex) {
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(
+            ConflictException exception) {
 
-        return criarResposta(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        return createResponse(
+                HttpStatus.CONFLICT,
+                exception.getMessage()
+        );
+    }
+
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponse> handleBusinessException(
+            BusinessException exception) {
+
+        return createResponse(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                exception.getMessage()
+        );
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ErroResposta> tratarCredenciaisInvalidas(BadCredentialsException ex) {
-        
-        return criarResposta(HttpStatus.UNAUTHORIZED, "E-mail ou senha inválidos");
+    public ResponseEntity<ErrorResponse> handleInvalidCredentials(
+            BadCredentialsException exception) {
+
+        return createResponse(
+                HttpStatus.UNAUTHORIZED,
+                "E-mail ou senha inválidos"
+        );
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErroResposta> tratarValidacao(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ErrorResponse> handleValidation(
+            MethodArgumentNotValidException exception) {
 
-        String mensagem = ex.getBindingResult()
+        String message = exception.getBindingResult()
                 .getFieldErrors()
                 .stream()
                 .findFirst()
-                .map(erro -> erro.getDefaultMessage())
+                .map(fieldError -> fieldError.getDefaultMessage())
                 .orElse("Dados inválidos");
 
-        return criarResposta(HttpStatus.BAD_REQUEST, mensagem);
+        return createResponse(
+                HttpStatus.BAD_REQUEST,
+                message
+        );
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErroResposta> tratarException(Exception ex) {
+    public ResponseEntity<ErrorResponse> handleUnexpectedException(
+            Exception exception) {
 
-        return criarResposta(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno do servidor");
+        return createResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Erro interno do servidor"
+        );
     }
 
-    @ExceptionHandler(ConflitoException.class)
-    public ResponseEntity<ErroResposta> tratarConflito(ConflitoException ex) {
-        
-        return criarResposta(HttpStatus.CONFLICT, ex.getMessage());
-    }
+    private ResponseEntity<ErrorResponse> createResponse(
+            HttpStatus status,
+            String message) {
 
-    private ResponseEntity<ErroResposta> criarResposta(HttpStatus status, String mensagem) {
-
-        ErroResposta erro = new ErroResposta(LocalDateTime.now(), status.value(), status.getReasonPhrase(), mensagem);
+        ErrorResponse response = new ErrorResponse(
+                LocalDateTime.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                message
+        );
 
         return ResponseEntity
                 .status(status)
-                .body(erro);
+                .body(response);
     }
 }

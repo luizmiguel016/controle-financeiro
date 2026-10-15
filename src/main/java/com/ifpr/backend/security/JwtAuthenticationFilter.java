@@ -8,8 +8,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.ifpr.backend.entity.Usuario;
-import com.ifpr.backend.repository.UsuarioRepository;
+import com.ifpr.backend.repository.UserRepository;
 
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -20,12 +19,14 @@ import jakarta.servlet.http.HttpServletResponse;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final UsuarioRepository usuarioRepository;
+    private final UserRepository userRepository;
 
-    public JwtAuthenticationFilter(JwtService jwtService, UsuarioRepository usuarioRepository) {
+    public JwtAuthenticationFilter(
+            JwtService jwtService,
+            UserRepository userRepository) {
 
         this.jwtService = jwtService;
-        this.usuarioRepository = usuarioRepository;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -42,20 +43,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = authorization.substring(7);
 
             try {
-                Long usuarioId = jwtService.extrairIdUsuario(token);
+                Long userId = jwtService.extractUserId(token);
 
-                usuarioRepository.findById(usuarioId).ifPresent(usuario -> {
+                userRepository.findById(userId).ifPresent(user -> {
 
-                    UsernamePasswordAuthenticationToken autenticacao = new UsernamePasswordAuthenticationToken(usuario, null, List.of());
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    user,
+                                    null,
+                                    List.of()
+                            );
 
-                    SecurityContext contexto = SecurityContextHolder.createEmptyContext();
+                    SecurityContext securityContext =
+                            SecurityContextHolder.createEmptyContext();
 
-                    contexto.setAuthentication(autenticacao);
+                    securityContext.setAuthentication(authentication);
 
-                    SecurityContextHolder.setContext(contexto);
+                    SecurityContextHolder.setContext(securityContext);
                 });
 
-            } catch (JwtException | IllegalArgumentException ex) {
+            } catch (JwtException | IllegalArgumentException exception) {
                 SecurityContextHolder.clearContext();
             }
         }

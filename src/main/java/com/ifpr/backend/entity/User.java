@@ -8,31 +8,32 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+
 import lombok.Getter;
 import lombok.Setter;
 
-@Entity 
-@Table (name="usuario")
-@Getter 
-@Setter 
-public class Usuario {
+@Entity
+@Table(name = "usuario")
+@Getter
+@Setter
+public class User {
 
-    @Id 
-    @GeneratedValue (strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    @Column(nullable = false)
-    private String nome;
+
+    @Column(name = "nome", nullable = false)
+    private String name;
 
     @Column(nullable = false, unique = true)
     private String email;
 
     @Column(name = "senha_criptografada", nullable = false)
-    private String senhaCriptografada;
+    private String passwordHash;
 
     @Column(name = "criado_em", nullable = false)
-    private LocalDateTime criadoEm;
+    private LocalDateTime createdAt;
 
     @Column(name = "atualizado_em")
-    private LocalDateTime atualizadoEm;
+    private LocalDateTime updatedAt;
 }

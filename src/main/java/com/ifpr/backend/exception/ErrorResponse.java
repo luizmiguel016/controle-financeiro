@@ -2,8 +2,8 @@ package com.ifpr.backend.exception;
 
 import java.time.LocalDateTime;
 
-public record ErroResposta(
-        LocalDateTime timestap,
+public record ErrorResponse(
+        LocalDateTime timestamp,
         int status,
         String error,
         String message

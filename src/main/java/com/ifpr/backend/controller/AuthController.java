@@ -8,11 +8,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.ifpr.backend.dto.TokenRespostaDTO;
-import com.ifpr.backend.dto.UsuarioLoginDTO;
-import com.ifpr.backend.dto.UsuarioRespostaDTO;
-import com.ifpr.backend.entity.Usuario;
-import com.ifpr.backend.service.AutenticacaoService;
+import com.ifpr.backend.dto.TokenResponseDTO;
+import com.ifpr.backend.dto.UserLoginDTO;
+import com.ifpr.backend.dto.UserResponseDTO;
+import com.ifpr.backend.entity.User;
+import com.ifpr.backend.service.AuthenticationService;
 
 import jakarta.validation.Valid;
 
@@ -20,31 +20,32 @@ import jakarta.validation.Valid;
 @RequestMapping("/auth")
 public class AuthController {
 
-    private final AutenticacaoService autenticacaoService;
-    
+    private final AuthenticationService authenticationService;
 
-    public AuthController(AutenticacaoService autenticacaoService) {
-        this.autenticacaoService = autenticacaoService;
+    public AuthController(AuthenticationService authenticationService) {
+        this.authenticationService = authenticationService;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<TokenRespostaDTO> login(@Valid @RequestBody UsuarioLoginDTO dto) {
+    public ResponseEntity<TokenResponseDTO> login(
+            @Valid @RequestBody UserLoginDTO dto) {
 
-        TokenRespostaDTO resposta = autenticacaoService.login(dto);
+        TokenResponseDTO response = authenticationService.login(dto);
 
-        return ResponseEntity.ok(resposta);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/me")
-    public ResponseEntity<UsuarioRespostaDTO> consultarUsuario(@AuthenticationPrincipal Usuario usuario) {
+    public ResponseEntity<UserResponseDTO> getCurrentUser(
+            @AuthenticationPrincipal User user) {
 
-        UsuarioRespostaDTO resposta = new UsuarioRespostaDTO(
-                usuario.getId(),
-                usuario.getNome(),
-                usuario.getEmail(),
-                usuario.getCriadoEm()
+        UserResponseDTO response = new UserResponseDTO(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getCreatedAt()
         );
 
-        return ResponseEntity.ok(resposta);
+        return ResponseEntity.ok(response);
     }
 }

@@ -7,7 +7,7 @@ import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.ifpr.backend.entity.Usuario;
+import com.ifpr.backend.entity.User;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -16,34 +16,38 @@ import io.jsonwebtoken.security.Keys;
 @Service
 public class JwtService {
 
-    private final SecretKey chave;
-    private final long expiracao;
+    private final SecretKey key;
+    private final long expiration;
 
-    public JwtService(@Value("${jwt.secret}") String segredoBase64, @Value("${jwt.expiration}") long expiracao) {
+    public JwtService(
+            @Value("${jwt.secret}") String base64Secret,
+            @Value("${jwt.expiration}") long expiration) {
 
-        this.chave = Keys.hmacShaKeyFor(Decoders.BASE64.decode(segredoBase64));
+        this.key = Keys.hmacShaKeyFor(
+                Decoders.BASE64.decode(base64Secret)
+        );
 
-        this.expiracao = expiracao;
+        this.expiration = expiration;
     }
 
-    public String gerarToken(Usuario usuario) {
+    public String generateToken(User user) {
 
-        Date agora = new Date();
-        Date expiraEm = new Date(agora.getTime() + expiracao);
+        Date now = new Date();
+        Date expiresAt = new Date(now.getTime() + expiration);
 
         return Jwts.builder()
-                .subject(usuario.getId().toString())
-                .claim("email", usuario.getEmail())
-                .issuedAt(agora)
-                .expiration(expiraEm)
-                .signWith(chave, Jwts.SIG.HS256)
+                .subject(user.getId().toString())
+                .claim("email", user.getEmail())
+                .issuedAt(now)
+                .expiration(expiresAt)
+                .signWith(key, Jwts.SIG.HS256)
                 .compact();
     }
 
-    public Long extrairIdUsuario(String token) {
+    public Long extractUserId(String token) {
 
         String id = Jwts.parser()
-                .verifyWith(chave)
+                .verifyWith(key)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload()

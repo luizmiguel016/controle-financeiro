@@ -13,36 +13,46 @@ class GlobalExceptionHandlerTest {
             new GlobalExceptionHandler();
 
     @Test
-    void deveRetornar409ParaConflito() {
+    void shouldReturn409ForConflict() {
 
-        ConflitoException excecao = new ConflitoException("E-mail já cadastrado");
+        ConflictException exception =
+                new ConflictException("E-mail já cadastrado");
 
-        ResponseEntity<ErroResposta> resposta = handler.tratarConflito(excecao);
+        ResponseEntity<ErrorResponse> response =
+                handler.handleConflict(exception);
 
-        assertEquals(HttpStatus.CONFLICT, resposta.getStatusCode());
+        assertEquals(
+                HttpStatus.CONFLICT,
+                response.getStatusCode()
+        );
 
-        ErroResposta corpo = resposta.getBody();
+        ErrorResponse body = response.getBody();
 
-        assertNotNull(corpo);
-        assertEquals(409, corpo.status());
-        assertEquals("Conflict", corpo.error());
-        assertEquals("E-mail já cadastrado", corpo.message());
+        assertNotNull(body);
+        assertEquals(409, body.status());
+        assertEquals("Conflict", body.error());
+        assertEquals("E-mail já cadastrado", body.message());
     }
 
     @Test
-    void deveRetornar422ParaRegraDeNegocio() {
+    void shouldReturn422ForBusinessRuleViolation() {
 
-        BusinessException excecao = new BusinessException("Operação não permitida");
+        BusinessException exception =
+                new BusinessException("Operação não permitida");
 
-        ResponseEntity<ErroResposta> resposta = handler.tratarBusinessException(excecao);
+        ResponseEntity<ErrorResponse> response =
+                handler.handleBusinessException(exception);
 
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, resposta.getStatusCode());
+        assertEquals(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                response.getStatusCode()
+        );
 
-        ErroResposta corpo = resposta.getBody();
+        ErrorResponse body = response.getBody();
 
-        assertNotNull(corpo);
-        assertEquals(422, corpo.status());
-        assertEquals("Unprocessable Entity", corpo.error());
-        assertEquals("Operação não permitida", corpo.message());
+        assertNotNull(body);
+        assertEquals(422, body.status());
+        assertEquals("Unprocessable Entity", body.error());
+        assertEquals("Operação não permitida", body.message());
     }
 }

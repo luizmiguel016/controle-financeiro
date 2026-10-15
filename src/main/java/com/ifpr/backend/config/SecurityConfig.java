@@ -10,7 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import com.ifpr.backend.repository.UsuarioRepository;
+import com.ifpr.backend.repository.UserRepository;
 import com.ifpr.backend.security.JwtAuthenticationFilter;
 import com.ifpr.backend.security.JwtService;
 
@@ -28,7 +28,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             JwtService jwtService,
-            UsuarioRepository usuarioRepository) throws Exception {
+            UserRepository userRepository) throws Exception {
 
         http
                 .csrf(csrf -> csrf.disable())
@@ -62,7 +62,7 @@ public class SecurityConfig {
                 .addFilterBefore(
                         new JwtAuthenticationFilter(
                                 jwtService,
-                                usuarioRepository
+                                userRepository
                         ),
                         UsernamePasswordAuthenticationFilter.class
                 );

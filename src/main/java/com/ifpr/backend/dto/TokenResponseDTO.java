@@ -1,6 +1,6 @@
 package com.ifpr.backend.dto;
 
-public record TokenRespostaDTO(
+public record TokenResponseDTO(
         String accessToken,
         String tokenType
 ) {
