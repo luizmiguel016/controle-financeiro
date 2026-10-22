@@ -14,13 +14,13 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-@Entity 
+@Entity
 @Table(name = "wallets")
-@Getter 
-@Setter 
+@Getter
+@Setter
 public class Wallet {
     
-    @Id 
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
