@@ -2,6 +2,7 @@ package com.ifpr.backend.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,5 +47,16 @@ public class WalletService {
         List<Wallet> wallets = walletRepository.findByOwner_Id(owner.getId());
 
         return wallets.stream().map(wallet -> new WalletResponseDTO(wallet.getId(), wallet.getName(), owner.getId(), wallet.getCreatedAt())).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<WalletResponseDTO> findOwnedById(Long id, User owner) {
+
+        return walletRepository.findByIdAndOwner_Id(id, owner.getId()).map(wallet -> new WalletResponseDTO(
+            wallet.getId(),
+            wallet.getName(),
+            owner.getId(),
+            wallet.getCreatedAt()
+        ));
     }
 }
