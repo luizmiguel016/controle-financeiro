@@ -1,8 +1,11 @@
 package com.ifpr.backend.controller;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,5 +38,13 @@ public class WalletController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<WalletResponseDTO>> list(@AuthenticationPrincipal User owner) {
+
+        List<WalletResponseDTO> response = walletService.listOwned(owner);
+
+        return ResponseEntity.ok(response);
     }
 }
