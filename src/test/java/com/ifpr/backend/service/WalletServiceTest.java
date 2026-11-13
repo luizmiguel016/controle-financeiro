@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -21,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.ifpr.backend.dto.WalletCreationDTO;
 import com.ifpr.backend.dto.WalletResponseDTO;
+import com.ifpr.backend.dto.WalletUpdateDTO;
 import com.ifpr.backend.entity.User;
 import com.ifpr.backend.entity.Wallet;
 import com.ifpr.backend.repository.WalletRepository;
@@ -44,7 +46,8 @@ class WalletServiceTest {
         User owner = new User();
         owner.setId(3L);
 
-        WalletCreationDTO dto = new WalletCreationDTO("  Despesas da Casa  ");
+        WalletCreationDTO dto =
+                new WalletCreationDTO("  Despesas da Casa  ");
 
         when(walletRepository.save(any(Wallet.class)))
                 .thenAnswer(invocation -> {
@@ -62,7 +65,8 @@ class WalletServiceTest {
         assertEquals(3L, response.ownerId());
         assertNotNull(response.createdAt());
 
-        ArgumentCaptor<Wallet> walletCaptor = ArgumentCaptor.forClass(Wallet.class);
+        ArgumentCaptor<Wallet> walletCaptor =
+                ArgumentCaptor.forClass(Wallet.class);
 
         verify(walletRepository).save(walletCaptor.capture());
 
@@ -84,7 +88,8 @@ class WalletServiceTest {
         when(walletRepository.findByOwner_Id(3L))
                 .thenReturn(List.of(wallet));
 
-        List<WalletResponseDTO> response = walletService.listOwned(owner);
+        List<WalletResponseDTO> response =
+                walletService.listOwned(owner);
 
         assertEquals(1, response.size());
         assertEquals(1L, response.get(0).id());
@@ -103,7 +108,8 @@ class WalletServiceTest {
         when(walletRepository.findByOwner_Id(4L))
                 .thenReturn(List.of());
 
-        List<WalletResponseDTO> response = walletService.listOwned(owner);
+        List<WalletResponseDTO> response =
+                walletService.listOwned(owner);
 
         assertTrue(response.isEmpty());
 
@@ -125,7 +131,8 @@ class WalletServiceTest {
         when(walletRepository.findByIdAndOwner_Id(1L, 3L))
                 .thenReturn(Optional.of(wallet));
 
-        Optional<WalletResponseDTO> response = walletService.findOwnedById(1L, owner);
+        Optional<WalletResponseDTO> response =
+                walletService.findOwnedById(1L, owner);
 
         assertTrue(response.isPresent());
         assertEquals(1L, response.get().id());
@@ -143,10 +150,65 @@ class WalletServiceTest {
         when(walletRepository.findByIdAndOwner_Id(1L, 4L))
                 .thenReturn(Optional.empty());
 
-        Optional<WalletResponseDTO> response = walletService.findOwnedById(1L, owner);
+        Optional<WalletResponseDTO> response =
+                walletService.findOwnedById(1L, owner);
 
         assertTrue(response.isEmpty());
 
         verify(walletRepository).findByIdAndOwner_Id(1L, 4L);
+    }
+
+    @Test
+    void shouldUpdateWalletOwnedByUser() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        Wallet wallet = new Wallet();
+        wallet.setId(1L);
+        wallet.setName("Despesas da Casa");
+        wallet.setOwner(owner);
+        wallet.setCreatedAt(LocalDateTime.now());
+
+        WalletUpdateDTO dto =
+                new WalletUpdateDTO("  Despesas Familiares  ");
+
+        when(walletRepository.findByIdAndOwner_Id(1L, 3L))
+                .thenReturn(Optional.of(wallet));
+
+        when(walletRepository.save(wallet))
+                .thenReturn(wallet);
+
+        Optional<WalletResponseDTO> response =
+                walletService.updateOwned(1L, dto, owner);
+
+        assertTrue(response.isPresent());
+        assertEquals("Despesas Familiares", response.get().name());
+        assertEquals(3L, response.get().ownerId());
+        assertEquals("Despesas Familiares", wallet.getName());
+
+        verify(walletRepository).findByIdAndOwner_Id(1L, 3L);
+        verify(walletRepository).save(wallet);
+    }
+
+    @Test
+    void shouldNotUpdateWalletOwnedByAnotherUser() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        WalletUpdateDTO dto =
+                new WalletUpdateDTO("Nome Alterado");
+
+        when(walletRepository.findByIdAndOwner_Id(1L, 4L))
+                .thenReturn(Optional.empty());
+
+        Optional<WalletResponseDTO> response =
+                walletService.updateOwned(1L, dto, owner);
+
+        assertTrue(response.isEmpty());
+
+        verify(walletRepository).findByIdAndOwner_Id(1L, 4L);
+        verify(walletRepository, never()).save(any(Wallet.class));
     }
 }

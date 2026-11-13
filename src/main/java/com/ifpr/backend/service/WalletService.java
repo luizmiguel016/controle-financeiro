@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ifpr.backend.dto.WalletCreationDTO;
 import com.ifpr.backend.dto.WalletResponseDTO;
+import com.ifpr.backend.dto.WalletUpdateDTO;
 import com.ifpr.backend.entity.User;
 import com.ifpr.backend.entity.Wallet;
 import com.ifpr.backend.repository.WalletRepository;
@@ -58,5 +59,19 @@ public class WalletService {
             owner.getId(),
             wallet.getCreatedAt()
         ));
+    }
+
+    @Transactional
+    public Optional<WalletResponseDTO> updateOwned(Long id, WalletUpdateDTO dto, User owner) {
+        return walletRepository
+                .findByIdAndOwner_Id(id, owner.getId())
+                .map(wallet -> {
+                    
+                    wallet.setName(dto.name().trim());
+
+                    Wallet updateWallet = walletRepository.save(wallet);
+
+                    return new WalletResponseDTO(updateWallet.getId(), updateWallet.getName(), owner.getId(), updateWallet.getCreatedAt());
+                });
     }
 }
