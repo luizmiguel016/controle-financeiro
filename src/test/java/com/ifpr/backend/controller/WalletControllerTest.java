@@ -20,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 
 import com.ifpr.backend.dto.WalletCreationDTO;
 import com.ifpr.backend.dto.WalletResponseDTO;
+import com.ifpr.backend.dto.WalletUpdateDTO;
 import com.ifpr.backend.entity.User;
 import com.ifpr.backend.service.WalletService;
 
@@ -128,5 +129,54 @@ class WalletControllerTest {
         assertNull(result.getBody());
 
         verify(walletService).findOwnedById(1L, owner);
+    }
+
+    @Test
+    void shouldUpdateWalletAndReturn200() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        WalletUpdateDTO request =
+                new WalletUpdateDTO("Despesas Familiares");
+
+        WalletResponseDTO expectedResponse = new WalletResponseDTO(
+                1L,
+                "Despesas Familiares",
+                3L,
+                LocalDateTime.now()
+        );
+
+        when(walletService.updateOwned(1L, request, owner))
+                .thenReturn(Optional.of(expectedResponse));
+
+        ResponseEntity<WalletResponseDTO> result =
+                walletController.update(1L, request, owner);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        assertSame(expectedResponse, result.getBody());
+
+        verify(walletService).updateOwned(1L, request, owner);
+    }
+
+    @Test
+    void shouldReturn404WhenUpdatingInaccessibleWallet() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        WalletUpdateDTO request =
+                new WalletUpdateDTO("Nome Alterado");
+
+        when(walletService.updateOwned(1L, request, owner))
+                .thenReturn(Optional.empty());
+
+        ResponseEntity<WalletResponseDTO> result =
+                walletController.update(1L, request, owner);
+
+        assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
+        assertNull(result.getBody());
+
+        verify(walletService).updateOwned(1L, request, owner);
     }
 }
