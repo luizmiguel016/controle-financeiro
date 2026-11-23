@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ifpr.backend.dto.CategoryCreationDTO;
 import com.ifpr.backend.dto.CategoryResponseDTO;
+import com.ifpr.backend.dto.CategoryUpdateDTO;
 import com.ifpr.backend.entity.Category;
 import com.ifpr.backend.entity.User;
 import com.ifpr.backend.repository.CategoryRepository;
@@ -66,5 +67,26 @@ public class CategoryService {
                         category.getType(),
                         owner.getId()
                 ));
+    }
+
+    @Transactional
+    public Optional<CategoryResponseDTO> updateOwned(Long id, CategoryUpdateDTO dto, User owner) {
+
+        return categoryRepository
+                .findByIdAndUser_Id(id, owner.getId())
+                .map(category -> {
+
+                    category.setName(dto.name().trim());
+                    category.setType(dto.type());
+
+                    Category updatedCategory = categoryRepository.save(category);
+
+                    return new CategoryResponseDTO(
+                            updatedCategory.getId(),
+                            updatedCategory.getName(),
+                            updatedCategory.getType(),
+                            owner.getId()
+                    );
+                });
     }
 }

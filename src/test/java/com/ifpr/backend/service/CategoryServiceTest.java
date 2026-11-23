@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -20,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.ifpr.backend.dto.CategoryCreationDTO;
 import com.ifpr.backend.dto.CategoryResponseDTO;
+import com.ifpr.backend.dto.CategoryUpdateDTO;
 import com.ifpr.backend.entity.Category;
 import com.ifpr.backend.entity.TransactionType;
 import com.ifpr.backend.entity.User;
@@ -214,5 +216,67 @@ class CategoryServiceTest {
         assertTrue(response.isEmpty());
 
         verify(categoryRepository).findByIdAndUser_Id(1L, 4L);
+    }
+
+    @Test
+    void shouldUpdateCategoryOwnedByUser() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        Category category = new Category();
+        category.setId(1L);
+        category.setName("Alimentação");
+        category.setType(TransactionType.EXPENSE);
+        category.setUser(owner);
+
+        CategoryUpdateDTO dto = new CategoryUpdateDTO(
+                "  Supermercado  ",
+                TransactionType.EXPENSE
+        );
+
+        when(categoryRepository.findByIdAndUser_Id(1L, 3L))
+                .thenReturn(Optional.of(category));
+
+        when(categoryRepository.save(category))
+                .thenReturn(category);
+
+        Optional<CategoryResponseDTO> response =
+                categoryService.updateOwned(1L, dto, owner);
+
+        assertTrue(response.isPresent());
+        assertEquals(1L, response.get().id());
+        assertEquals("Supermercado", response.get().name());
+        assertEquals(TransactionType.EXPENSE, response.get().type());
+        assertEquals(3L, response.get().userId());
+
+        assertEquals("Supermercado", category.getName());
+        assertSame(owner, category.getUser());
+
+        verify(categoryRepository).findByIdAndUser_Id(1L, 3L);
+        verify(categoryRepository).save(category);
+    }
+
+    @Test
+    void shouldNotUpdateCategoryOwnedByAnotherUser() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        CategoryUpdateDTO dto = new CategoryUpdateDTO(
+                "Nome Alterado",
+                TransactionType.INCOME
+        );
+
+        when(categoryRepository.findByIdAndUser_Id(1L, 4L))
+                .thenReturn(Optional.empty());
+
+        Optional<CategoryResponseDTO> response =
+                categoryService.updateOwned(1L, dto, owner);
+
+        assertTrue(response.isEmpty());
+
+        verify(categoryRepository).findByIdAndUser_Id(1L, 4L);
+        verify(categoryRepository, never()).save(any(Category.class));
     }
 }
