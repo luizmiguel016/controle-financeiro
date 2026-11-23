@@ -1,11 +1,13 @@
-
 package com.ifpr.backend.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,7 +56,8 @@ class CategoryServiceTest {
                     return category;
                 });
 
-        CategoryResponseDTO response = categoryService.create(dto, owner);
+        CategoryResponseDTO response =
+                categoryService.create(dto, owner);
 
         assertEquals(1L, response.id());
         assertEquals("Alimentação", response.name());
@@ -93,7 +96,8 @@ class CategoryServiceTest {
                     return category;
                 });
 
-        CategoryResponseDTO response = categoryService.create(dto, owner);
+        CategoryResponseDTO response =
+                categoryService.create(dto, owner);
 
         assertEquals(2L, response.id());
         assertEquals("Salário", response.name());
@@ -106,6 +110,63 @@ class CategoryServiceTest {
         verify(categoryRepository).save(categoryCaptor.capture());
 
         assertSame(owner, categoryCaptor.getValue().getUser());
-        assertEquals(TransactionType.INCOME, categoryCaptor.getValue().getType());
+        assertEquals(
+                TransactionType.INCOME,
+                categoryCaptor.getValue().getType()
+        );
+    }
+
+    @Test
+    void shouldListOnlyOwnedCategories() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        Category food = new Category();
+        food.setId(1L);
+        food.setName("Alimentação");
+        food.setType(TransactionType.EXPENSE);
+        food.setUser(owner);
+
+        Category salary = new Category();
+        salary.setId(2L);
+        salary.setName("Salário");
+        salary.setType(TransactionType.INCOME);
+        salary.setUser(owner);
+
+        when(categoryRepository.findByUser_Id(3L))
+                .thenReturn(List.of(food, salary));
+
+        List<CategoryResponseDTO> response =
+                categoryService.listOwned(owner);
+
+        assertEquals(2, response.size());
+
+        assertEquals("Alimentação", response.get(0).name());
+        assertEquals(TransactionType.EXPENSE, response.get(0).type());
+        assertEquals(3L, response.get(0).userId());
+
+        assertEquals("Salário", response.get(1).name());
+        assertEquals(TransactionType.INCOME, response.get(1).type());
+        assertEquals(3L, response.get(1).userId());
+
+        verify(categoryRepository).findByUser_Id(3L);
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenUserHasNoCategories() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        when(categoryRepository.findByUser_Id(4L))
+                .thenReturn(List.of());
+
+        List<CategoryResponseDTO> response =
+                categoryService.listOwned(owner);
+
+        assertTrue(response.isEmpty());
+
+        verify(categoryRepository).findByUser_Id(4L);
     }
 }

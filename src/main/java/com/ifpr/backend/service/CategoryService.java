@@ -1,6 +1,8 @@
 
 package com.ifpr.backend.service;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,5 +38,20 @@ public class CategoryService {
                 savedCategory.getType(),
                 owner.getId()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<CategoryResponseDTO> listOwned(User owner) {
+
+        List<Category> categories = categoryRepository.findByUser_Id(owner.getId());
+
+        return categories.stream()
+                .map(category -> new CategoryResponseDTO(
+                        category.getId(),
+                        category.getName(),
+                        category.getType(),
+                        owner.getId()
+                ))
+                .toList();
     }
 }
