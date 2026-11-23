@@ -1,13 +1,14 @@
-
 package com.ifpr.backend.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -114,5 +115,49 @@ class CategoryControllerTest {
         assertTrue(result.getBody().isEmpty());
 
         verify(categoryService).listOwned(owner);
+    }
+
+    @Test
+    void shouldFindOwnedCategoryAndReturn200() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        CategoryResponseDTO expectedResponse =
+                new CategoryResponseDTO(
+                        1L,
+                        "Alimentação",
+                        TransactionType.EXPENSE,
+                        3L
+                );
+
+        when(categoryService.findOwnedById(1L, owner))
+                .thenReturn(Optional.of(expectedResponse));
+
+        ResponseEntity<CategoryResponseDTO> result =
+                categoryController.findById(1L, owner);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        assertSame(expectedResponse, result.getBody());
+
+        verify(categoryService).findOwnedById(1L, owner);
+    }
+
+    @Test
+    void shouldReturn404WhenCategoryIsNotAccessible() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        when(categoryService.findOwnedById(1L, owner))
+                .thenReturn(Optional.empty());
+
+        ResponseEntity<CategoryResponseDTO> result =
+                categoryController.findById(1L, owner);
+
+        assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
+        assertNull(result.getBody());
+
+        verify(categoryService).findOwnedById(1L, owner);
     }
 }
