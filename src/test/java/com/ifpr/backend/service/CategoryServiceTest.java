@@ -1,3 +1,4 @@
+
 package com.ifpr.backend.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -8,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -168,5 +170,49 @@ class CategoryServiceTest {
         assertTrue(response.isEmpty());
 
         verify(categoryRepository).findByUser_Id(4L);
+    }
+
+    @Test
+    void shouldFindCategoryOwnedByUser() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        Category category = new Category();
+        category.setId(1L);
+        category.setName("Alimentação");
+        category.setType(TransactionType.EXPENSE);
+        category.setUser(owner);
+
+        when(categoryRepository.findByIdAndUser_Id(1L, 3L))
+                .thenReturn(Optional.of(category));
+
+        Optional<CategoryResponseDTO> response =
+                categoryService.findOwnedById(1L, owner);
+
+        assertTrue(response.isPresent());
+        assertEquals(1L, response.get().id());
+        assertEquals("Alimentação", response.get().name());
+        assertEquals(TransactionType.EXPENSE, response.get().type());
+        assertEquals(3L, response.get().userId());
+
+        verify(categoryRepository).findByIdAndUser_Id(1L, 3L);
+    }
+
+    @Test
+    void shouldNotFindCategoryOwnedByAnotherUser() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        when(categoryRepository.findByIdAndUser_Id(1L, 4L))
+                .thenReturn(Optional.empty());
+
+        Optional<CategoryResponseDTO> response =
+                categoryService.findOwnedById(1L, owner);
+
+        assertTrue(response.isEmpty());
+
+        verify(categoryRepository).findByIdAndUser_Id(1L, 4L);
     }
 }
