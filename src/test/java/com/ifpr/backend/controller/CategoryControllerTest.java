@@ -3,8 +3,11 @@ package com.ifpr.backend.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -58,5 +61,58 @@ class CategoryControllerTest {
         assertSame(expectedResponse, result.getBody());
 
         verify(categoryService).create(request, owner);
+    }
+
+    @Test
+    void shouldListOwnedCategoriesAndReturn200() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        CategoryResponseDTO food = new CategoryResponseDTO(
+                1L,
+                "Alimentação",
+                TransactionType.EXPENSE,
+                3L
+        );
+
+        CategoryResponseDTO salary = new CategoryResponseDTO(
+                2L,
+                "Salário",
+                TransactionType.INCOME,
+                3L
+        );
+
+        List<CategoryResponseDTO> expectedResponse =
+                List.of(food, salary);
+
+        when(categoryService.listOwned(owner))
+                .thenReturn(expectedResponse);
+
+        ResponseEntity<List<CategoryResponseDTO>> result =
+                categoryController.list(owner);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        assertEquals(expectedResponse, result.getBody());
+
+        verify(categoryService).listOwned(owner);
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenUserHasNoCategories() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        when(categoryService.listOwned(owner))
+                .thenReturn(List.of());
+
+        ResponseEntity<List<CategoryResponseDTO>> result =
+                categoryController.list(owner);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        assertTrue(result.getBody().isEmpty());
+
+        verify(categoryService).listOwned(owner);
     }
 }
