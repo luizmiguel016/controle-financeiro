@@ -1,3 +1,4 @@
+
 package com.ifpr.backend.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -20,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 
 import com.ifpr.backend.dto.CategoryCreationDTO;
 import com.ifpr.backend.dto.CategoryResponseDTO;
+import com.ifpr.backend.dto.CategoryUpdateDTO;
 import com.ifpr.backend.entity.TransactionType;
 import com.ifpr.backend.entity.User;
 import com.ifpr.backend.service.CategoryService;
@@ -159,5 +161,59 @@ class CategoryControllerTest {
         assertNull(result.getBody());
 
         verify(categoryService).findOwnedById(1L, owner);
+    }
+
+    @Test
+    void shouldUpdateCategoryAndReturn200() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        CategoryUpdateDTO request = new CategoryUpdateDTO(
+                "Supermercado",
+                TransactionType.EXPENSE
+        );
+
+        CategoryResponseDTO expectedResponse =
+                new CategoryResponseDTO(
+                        1L,
+                        "Supermercado",
+                        TransactionType.EXPENSE,
+                        3L
+                );
+
+        when(categoryService.updateOwned(1L, request, owner))
+                .thenReturn(Optional.of(expectedResponse));
+
+        ResponseEntity<CategoryResponseDTO> result =
+                categoryController.update(1L, request, owner);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        assertSame(expectedResponse, result.getBody());
+
+        verify(categoryService).updateOwned(1L, request, owner);
+    }
+
+    @Test
+    void shouldReturn404WhenUpdatingInaccessibleCategory() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        CategoryUpdateDTO request = new CategoryUpdateDTO(
+                "Nome Alterado",
+                TransactionType.INCOME
+        );
+
+        when(categoryService.updateOwned(1L, request, owner))
+                .thenReturn(Optional.empty());
+
+        ResponseEntity<CategoryResponseDTO> result =
+                categoryController.update(1L, request, owner);
+
+        assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
+        assertNull(result.getBody());
+
+        verify(categoryService).updateOwned(1L, request, owner);
     }
 }
