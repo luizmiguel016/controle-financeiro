@@ -2,6 +2,7 @@
 package com.ifpr.backend.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -278,5 +279,47 @@ class CategoryServiceTest {
 
         verify(categoryRepository).findByIdAndUser_Id(1L, 4L);
         verify(categoryRepository, never()).save(any(Category.class));
+    }
+
+    @Test
+    void shouldDeleteCategoryOwnedByUser() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        Category category = new Category();
+        category.setId(1L);
+        category.setName("Alimentação");
+        category.setType(TransactionType.EXPENSE);
+        category.setUser(owner);
+
+        when(categoryRepository.findByIdAndUser_Id(1L, 3L))
+                .thenReturn(Optional.of(category));
+
+        boolean deleted =
+                categoryService.deleteOwned(1L, owner);
+
+        assertTrue(deleted);
+
+        verify(categoryRepository).findByIdAndUser_Id(1L, 3L);
+        verify(categoryRepository).delete(category);
+    }
+
+    @Test
+    void shouldNotDeleteCategoryOwnedByAnotherUser() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        when(categoryRepository.findByIdAndUser_Id(1L, 4L))
+                .thenReturn(Optional.empty());
+
+        boolean deleted =
+                categoryService.deleteOwned(1L, owner);
+
+        assertFalse(deleted);
+
+        verify(categoryRepository).findByIdAndUser_Id(1L, 4L);
+        verify(categoryRepository, never()).delete(any(Category.class));
     }
 }

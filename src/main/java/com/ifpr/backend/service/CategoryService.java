@@ -89,4 +89,18 @@ public class CategoryService {
                     );
                 });
     }
+
+    @Transactional
+    public boolean deleteOwned(Long id, User owner) {
+
+        Optional<Category> category = categoryRepository.findByIdAndUser_Id(id, owner.getId());
+
+        if (category.isEmpty()) {
+            return false;
+        }
+
+        categoryRepository.delete(category.get());
+
+        return true;
+    }
 }
