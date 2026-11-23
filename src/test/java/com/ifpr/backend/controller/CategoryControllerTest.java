@@ -216,4 +216,40 @@ class CategoryControllerTest {
 
         verify(categoryService).updateOwned(1L, request, owner);
     }
+
+    @Test
+    void shouldDeleteCategoryAndReturn204() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        when(categoryService.deleteOwned(1L, owner))
+                .thenReturn(true);
+
+        ResponseEntity<Void> result =
+                categoryController.delete(1L, owner);
+
+        assertEquals(HttpStatus.NO_CONTENT, result.getStatusCode());
+        assertNull(result.getBody());
+
+        verify(categoryService).deleteOwned(1L, owner);
+    }
+
+    @Test
+    void shouldReturn404WhenDeletingInaccessibleCategory() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        when(categoryService.deleteOwned(1L, owner))
+                .thenReturn(false);
+
+        ResponseEntity<Void> result =
+                categoryController.delete(1L, owner);
+
+        assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
+        assertNull(result.getBody());
+
+        verify(categoryService).deleteOwned(1L, owner);
+    }
 }
