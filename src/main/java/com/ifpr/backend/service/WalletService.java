@@ -47,22 +47,32 @@ public class WalletService {
 
         List<Wallet> wallets = walletRepository.findByOwner_Id(owner.getId());
 
-        return wallets.stream().map(wallet -> new WalletResponseDTO(wallet.getId(), wallet.getName(), owner.getId(), wallet.getCreatedAt())).toList();
+        return wallets.stream()
+                .map(wallet -> new WalletResponseDTO(
+                        wallet.getId(),
+                        wallet.getName(),
+                        owner.getId(),
+                        wallet.getCreatedAt()
+                ))
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public Optional<WalletResponseDTO> findOwnedById(Long id, User owner) {
 
-        return walletRepository.findByIdAndOwner_Id(id, owner.getId()).map(wallet -> new WalletResponseDTO(
-            wallet.getId(),
-            wallet.getName(),
-            owner.getId(),
-            wallet.getCreatedAt()
-        ));
+        return walletRepository
+            .findByIdAndOwner_Id(id, owner.getId())
+            .map(wallet -> new WalletResponseDTO(
+                    wallet.getId(),
+                    wallet.getName(),
+                    owner.getId(),
+                    wallet.getCreatedAt()
+            ));
     }
 
     @Transactional
     public Optional<WalletResponseDTO> updateOwned(Long id, WalletUpdateDTO dto, User owner) {
+        
         return walletRepository
                 .findByIdAndOwner_Id(id, owner.getId())
                 .map(wallet -> {
@@ -71,7 +81,26 @@ public class WalletService {
 
                     Wallet updateWallet = walletRepository.save(wallet);
 
-                    return new WalletResponseDTO(updateWallet.getId(), updateWallet.getName(), owner.getId(), updateWallet.getCreatedAt());
+                    return new WalletResponseDTO(
+                            updateWallet.getId(),
+                            updateWallet.getName(),
+                            owner.getId(),
+                            updateWallet.getCreatedAt()
+                    );
                 });
+    }
+
+    @Transactional
+    public boolean deleteOwned(Long id, User owner) {
+
+        Optional<Wallet> wallet = walletRepository.findByIdAndOwner_Id(id, owner.getId());
+
+        if (wallet.isEmpty()) {
+            return false;
+        }
+
+        walletRepository.delete(wallet.get());
+
+        return true;
     }
 }

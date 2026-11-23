@@ -1,6 +1,8 @@
+
 package com.ifpr.backend.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -51,14 +53,13 @@ class WalletServiceTest {
 
         when(walletRepository.save(any(Wallet.class)))
                 .thenAnswer(invocation -> {
-
                     Wallet wallet = invocation.getArgument(0);
                     wallet.setId(1L);
-
                     return wallet;
                 });
 
-        WalletResponseDTO response = walletService.create(dto, owner);
+        WalletResponseDTO response =
+                walletService.create(dto, owner);
 
         assertEquals(1L, response.id());
         assertEquals("Despesas da Casa", response.name());
@@ -210,5 +211,43 @@ class WalletServiceTest {
 
         verify(walletRepository).findByIdAndOwner_Id(1L, 4L);
         verify(walletRepository, never()).save(any(Wallet.class));
+    }
+
+    @Test
+    void shouldDeleteWalletOwnedByUser() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        Wallet wallet = new Wallet();
+        wallet.setId(1L);
+        wallet.setOwner(owner);
+
+        when(walletRepository.findByIdAndOwner_Id(1L, 3L))
+                .thenReturn(Optional.of(wallet));
+
+        boolean deleted = walletService.deleteOwned(1L, owner);
+
+        assertTrue(deleted);
+
+        verify(walletRepository).findByIdAndOwner_Id(1L, 3L);
+        verify(walletRepository).delete(wallet);
+    }
+
+    @Test
+    void shouldNotDeleteWalletOwnedByAnotherUser() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        when(walletRepository.findByIdAndOwner_Id(1L, 4L))
+                .thenReturn(Optional.empty());
+
+        boolean deleted = walletService.deleteOwned(1L, owner);
+
+        assertFalse(deleted);
+
+        verify(walletRepository).findByIdAndOwner_Id(1L, 4L);
+        verify(walletRepository, never()).delete(any(Wallet.class));
     }
 }

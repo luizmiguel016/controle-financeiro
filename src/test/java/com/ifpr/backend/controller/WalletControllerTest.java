@@ -1,3 +1,4 @@
+
 package com.ifpr.backend.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -74,7 +75,8 @@ class WalletControllerTest {
                 LocalDateTime.now()
         );
 
-        List<WalletResponseDTO> expectedResponse = List.of(wallet);
+        List<WalletResponseDTO> expectedResponse =
+                List.of(wallet);
 
         when(walletService.listOwned(owner))
                 .thenReturn(expectedResponse);
@@ -178,5 +180,41 @@ class WalletControllerTest {
         assertNull(result.getBody());
 
         verify(walletService).updateOwned(1L, request, owner);
+    }
+
+    @Test
+    void shouldDeleteWalletAndReturn204() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        when(walletService.deleteOwned(1L, owner))
+                .thenReturn(true);
+
+        ResponseEntity<Void> result =
+                walletController.delete(1L, owner);
+
+        assertEquals(HttpStatus.NO_CONTENT, result.getStatusCode());
+        assertNull(result.getBody());
+
+        verify(walletService).deleteOwned(1L, owner);
+    }
+
+    @Test
+    void shouldReturn404WhenDeletingInaccessibleWallet() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        when(walletService.deleteOwned(1L, owner))
+                .thenReturn(false);
+
+        ResponseEntity<Void> result =
+                walletController.delete(1L, owner);
+
+        assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
+        assertNull(result.getBody());
+
+        verify(walletService).deleteOwned(1L, owner);
     }
 }
