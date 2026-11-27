@@ -1,6 +1,7 @@
 package com.ifpr.backend.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -24,7 +25,10 @@ public class TransactionService {
     private final WalletRepository walletRepository;
     private final CategoryRepository categoryRepository;
 
-    public TransactionService(TransactionRepository transactionRepository, WalletRepository walletRepository, CategoryRepository categoryRepository) {
+    public TransactionService(
+            TransactionRepository transactionRepository,
+            WalletRepository walletRepository,
+            CategoryRepository categoryRepository) {
 
         this.transactionRepository = transactionRepository;
         this.walletRepository = walletRepository;
@@ -32,23 +36,29 @@ public class TransactionService {
     }
 
     @Transactional
-    public Optional<TransactionResponseDTO> create(TransactionCreationDTO dto, User author) {
+    public Optional<TransactionResponseDTO> create(
+            TransactionCreationDTO dto,
+            User author) {
 
-        Optional<Wallet> wallet = walletRepository.findByIdAndOwner_Id(dto.walletId(), author.getId());
+        Optional<Wallet> wallet =
+                walletRepository.findByIdAndOwner_Id(
+                        dto.walletId(),
+                        author.getId()
+                );
 
         if (wallet.isEmpty()) {
             return Optional.empty();
         }
 
-        Optional<Category> category = categoryRepository.findByIdAndUser_Id(dto.categoryId(), author.getId());
+        Optional<Category> category =
+                categoryRepository.findByIdAndUser_Id(dto.categoryId(), author.getId());
 
         if (category.isEmpty()) {
             return Optional.empty();
         }
 
         if (category.get().getType() != dto.type()) {
-            throw new BusinessException("O tipo da transação deve corresponder ao tipo da categoria"
-            );
+            throw new BusinessException("O tipo da transação deve corresponder ao tipo da categoria");
         }
 
         Transaction transaction = new Transaction();
@@ -75,5 +85,37 @@ public class TransactionService {
                 savedTransaction.getCreatedBy().getId(),
                 savedTransaction.getCreatedAt()
         ));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<List<TransactionResponseDTO>> listOwnedByWallet(Long walletId, User owner) {
+
+        Optional<Wallet> wallet =
+                walletRepository.findByIdAndOwner_Id(
+                        walletId,
+                        owner.getId()
+                );
+
+        if (wallet.isEmpty()) {
+            return Optional.empty();
+        }
+
+        List<Transaction> transactions = transactionRepository.findByWallet_Id(walletId);
+
+        List<TransactionResponseDTO> response = transactions.stream()
+                .map(transaction -> new TransactionResponseDTO(
+                        transaction.getId(),
+                        transaction.getDescription(),
+                        transaction.getAmount(),
+                        transaction.getType(),
+                        transaction.getTransactionDate(),
+                        transaction.getWallet().getId(),
+                        transaction.getCategory().getId(),
+                        transaction.getCreatedBy().getId(),
+                        transaction.getCreatedAt()
+                ))
+                .toList();
+
+        return Optional.of(response);
     }
 }

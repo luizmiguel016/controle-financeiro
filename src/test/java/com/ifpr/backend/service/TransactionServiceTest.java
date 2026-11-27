@@ -13,6 +13,8 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -103,8 +105,14 @@ class TransactionServiceTest {
 
         assertTrue(response.isPresent());
         assertEquals(100L, response.get().id());
-        assertEquals("Compra no supermercado", response.get().description());
-        assertEquals(new BigDecimal("189.90"), response.get().amount());
+        assertEquals(
+                "Compra no supermercado",
+                response.get().description()
+        );
+        assertEquals(
+                new BigDecimal("189.90"),
+                response.get().amount()
+        );
         assertEquals(TransactionType.EXPENSE, response.get().type());
         assertEquals(date, response.get().transactionDate());
         assertEquals(10L, response.get().walletId());
@@ -172,7 +180,10 @@ class TransactionServiceTest {
         assertTrue(response.isPresent());
         assertEquals(101L, response.get().id());
         assertEquals("Salário", response.get().description());
-        assertEquals(new BigDecimal("3500.00"), response.get().amount());
+        assertEquals(
+                new BigDecimal("3500.00"),
+                response.get().amount()
+        );
         assertEquals(TransactionType.INCOME, response.get().type());
         assertEquals(3L, response.get().createdById());
 
@@ -289,5 +300,125 @@ class TransactionServiceTest {
         verify(categoryRepository).findByIdAndUser_Id(20L, 3L);
 
         verifyNoInteractions(transactionRepository);
+    }
+
+    @Test
+    void shouldListTransactionsFromOwnedWallet() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        Wallet wallet = new Wallet();
+        wallet.setId(10L);
+        wallet.setOwner(owner);
+
+        Category expenseCategory = new Category();
+        expenseCategory.setId(20L);
+        expenseCategory.setType(TransactionType.EXPENSE);
+
+        Category incomeCategory = new Category();
+        incomeCategory.setId(21L);
+        incomeCategory.setType(TransactionType.INCOME);
+
+        Transaction expense = new Transaction();
+        expense.setId(100L);
+        expense.setDescription("Supermercado");
+        expense.setAmount(new BigDecimal("189.90"));
+        expense.setType(TransactionType.EXPENSE);
+        expense.setTransactionDate(LocalDate.of(2026, 11, 25));
+        expense.setWallet(wallet);
+        expense.setCategory(expenseCategory);
+        expense.setCreatedBy(owner);
+        expense.setCreatedAt(LocalDateTime.of(2026, 11, 25, 12, 0));
+
+        Transaction income = new Transaction();
+        income.setId(101L);
+        income.setDescription("Salário");
+        income.setAmount(new BigDecimal("3500.00"));
+        income.setType(TransactionType.INCOME);
+        income.setTransactionDate(LocalDate.of(2026, 11, 26));
+        income.setWallet(wallet);
+        income.setCategory(incomeCategory);
+        income.setCreatedBy(owner);
+        income.setCreatedAt(LocalDateTime.of(2026, 11, 26, 9, 0));
+
+        when(walletRepository.findByIdAndOwner_Id(10L, 3L))
+                .thenReturn(Optional.of(wallet));
+
+        when(transactionRepository.findByWallet_Id(10L))
+                .thenReturn(List.of(expense, income));
+
+        Optional<List<TransactionResponseDTO>> response =
+                transactionService.listOwnedByWallet(10L, owner);
+
+        assertTrue(response.isPresent());
+        assertEquals(2, response.get().size());
+
+        TransactionResponseDTO first = response.get().get(0);
+
+        assertEquals(100L, first.id());
+        assertEquals("Supermercado", first.description());
+        assertEquals(new BigDecimal("189.90"), first.amount());
+        assertEquals(TransactionType.EXPENSE, first.type());
+        assertEquals(10L, first.walletId());
+        assertEquals(20L, first.categoryId());
+        assertEquals(3L, first.createdById());
+
+        TransactionResponseDTO second = response.get().get(1);
+
+        assertEquals(101L, second.id());
+        assertEquals("Salário", second.description());
+        assertEquals(new BigDecimal("3500.00"), second.amount());
+        assertEquals(TransactionType.INCOME, second.type());
+        assertEquals(10L, second.walletId());
+        assertEquals(21L, second.categoryId());
+
+        verify(walletRepository).findByIdAndOwner_Id(10L, 3L);
+        verify(transactionRepository).findByWallet_Id(10L);
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenOwnedWalletHasNoTransactions() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        Wallet wallet = new Wallet();
+        wallet.setId(10L);
+        wallet.setOwner(owner);
+
+        when(walletRepository.findByIdAndOwner_Id(10L, 3L))
+                .thenReturn(Optional.of(wallet));
+
+        when(transactionRepository.findByWallet_Id(10L))
+                .thenReturn(List.of());
+
+        Optional<List<TransactionResponseDTO>> response =
+                transactionService.listOwnedByWallet(10L, owner);
+
+        assertTrue(response.isPresent());
+        assertTrue(response.get().isEmpty());
+
+        verify(walletRepository).findByIdAndOwner_Id(10L, 3L);
+        verify(transactionRepository).findByWallet_Id(10L);
+    }
+
+    @Test
+    void shouldNotListTransactionsFromAnotherUsersWallet() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        when(walletRepository.findByIdAndOwner_Id(10L, 4L))
+                .thenReturn(Optional.empty());
+
+        Optional<List<TransactionResponseDTO>> response =
+                transactionService.listOwnedByWallet(10L, owner);
+
+        assertTrue(response.isEmpty());
+
+        verify(walletRepository).findByIdAndOwner_Id(10L, 4L);
+
+        verifyNoInteractions(transactionRepository, categoryRepository);
     }
 }
