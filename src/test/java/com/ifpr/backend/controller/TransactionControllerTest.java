@@ -288,12 +288,8 @@ class TransactionControllerTest {
 
         assertEquals(HttpStatus.OK, result.getStatusCode());
         assertSame(expectedResponse, result.getBody());
-
         assertEquals(5L, result.getBody().createdById());
-        assertEquals(
-                originalCreatedAt,
-                result.getBody().createdAt()
-        );
+        assertEquals(originalCreatedAt, result.getBody().createdAt());
 
         verify(transactionService).updateOwned(100L, request, owner);
     }
@@ -324,5 +320,41 @@ class TransactionControllerTest {
         assertNull(result.getBody());
 
         verify(transactionService).updateOwned(100L, request, owner);
+    }
+
+    @Test
+    void shouldDeleteOwnedTransactionAndReturn204() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        when(transactionService.deleteOwned(100L, owner))
+                .thenReturn(true);
+
+        ResponseEntity<Void> result =
+                transactionController.delete(100L, owner);
+
+        assertEquals(HttpStatus.NO_CONTENT, result.getStatusCode());
+        assertNull(result.getBody());
+
+        verify(transactionService).deleteOwned(100L, owner);
+    }
+
+    @Test
+    void shouldReturn404WhenDeletingInaccessibleTransaction() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        when(transactionService.deleteOwned(100L, owner))
+                .thenReturn(false);
+
+        ResponseEntity<Void> result =
+                transactionController.delete(100L, owner);
+
+        assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
+        assertNull(result.getBody());
+
+        verify(transactionService).deleteOwned(100L, owner);
     }
 }
