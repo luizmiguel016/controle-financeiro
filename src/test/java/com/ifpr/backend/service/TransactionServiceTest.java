@@ -421,4 +421,101 @@ class TransactionServiceTest {
 
         verifyNoInteractions(transactionRepository, categoryRepository);
     }
+
+    @Test
+    void shouldFindTransactionFromOwnedWallet() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        Wallet wallet = new Wallet();
+        wallet.setId(10L);
+        wallet.setOwner(owner);
+
+        Category category = new Category();
+        category.setId(20L);
+        category.setType(TransactionType.EXPENSE);
+
+        LocalDate transactionDate =
+                LocalDate.of(2026, 11, 26);
+
+        LocalDateTime createdAt =
+                LocalDateTime.of(2026, 11, 26, 15, 30);
+
+        Transaction transaction = new Transaction();
+        transaction.setId(100L);
+        transaction.setDescription("Supermercado");
+        transaction.setAmount(new BigDecimal("189.90"));
+        transaction.setType(TransactionType.EXPENSE);
+        transaction.setTransactionDate(transactionDate);
+        transaction.setWallet(wallet);
+        transaction.setCategory(category);
+        transaction.setCreatedBy(owner);
+        transaction.setCreatedAt(createdAt);
+
+        when(transactionRepository.findByIdAndWallet_Owner_Id(100L, 3L))
+                .thenReturn(Optional.of(transaction));
+
+        Optional<TransactionResponseDTO> response =
+                transactionService.findOwnedById(100L, owner);
+
+        assertTrue(response.isPresent());
+
+        TransactionResponseDTO result = response.get();
+
+        assertEquals(100L, result.id());
+        assertEquals("Supermercado", result.description());
+        assertEquals(new BigDecimal("189.90"), result.amount());
+        assertEquals(TransactionType.EXPENSE, result.type());
+        assertEquals(transactionDate, result.transactionDate());
+        assertEquals(10L, result.walletId());
+        assertEquals(20L, result.categoryId());
+        assertEquals(3L, result.createdById());
+        assertEquals(createdAt, result.createdAt());
+
+        verify(transactionRepository)
+                .findByIdAndWallet_Owner_Id(100L, 3L);
+
+        verifyNoInteractions(walletRepository, categoryRepository);
+    }
+
+    @Test
+    void shouldNotFindTransactionFromAnotherUsersWallet() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        when(transactionRepository.findByIdAndWallet_Owner_Id(100L, 4L))
+                .thenReturn(Optional.empty());
+
+        Optional<TransactionResponseDTO> response =
+                transactionService.findOwnedById(100L, owner);
+
+        assertTrue(response.isEmpty());
+
+        verify(transactionRepository)
+                .findByIdAndWallet_Owner_Id(100L, 4L);
+
+        verifyNoInteractions(walletRepository, categoryRepository);
+    }
+
+    @Test
+    void shouldNotFindNonexistentTransaction() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        when(transactionRepository.findByIdAndWallet_Owner_Id(999L, 3L))
+                .thenReturn(Optional.empty());
+
+        Optional<TransactionResponseDTO> response =
+                transactionService.findOwnedById(999L, owner);
+
+        assertTrue(response.isEmpty());
+
+        verify(transactionRepository)
+                .findByIdAndWallet_Owner_Id(999L, 3L);
+
+        verifyNoInteractions(walletRepository, categoryRepository);
+    }
 }

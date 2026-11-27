@@ -118,4 +118,22 @@ public class TransactionService {
 
         return Optional.of(response);
     }
+
+    @Transactional(readOnly = true)
+    public Optional<TransactionResponseDTO> findOwnedById(Long id, User owner) {
+
+        return transactionRepository
+                .findByIdAndWallet_Owner_Id(id, owner.getId())
+                .map(transaction -> new TransactionResponseDTO(
+                        transaction.getId(),
+                        transaction.getDescription(),
+                        transaction.getAmount(),
+                        transaction.getType(),
+                        transaction.getTransactionDate(),
+                        transaction.getWallet().getId(),
+                        transaction.getCategory().getId(),
+                        transaction.getCreatedBy().getId(),
+                        transaction.getCreatedAt()
+                ));
+    }
 }
