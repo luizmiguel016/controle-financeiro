@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -26,6 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.ifpr.backend.dto.TransactionCreationDTO;
 import com.ifpr.backend.dto.TransactionResponseDTO;
+import com.ifpr.backend.dto.TransactionUpdateDTO;
 import com.ifpr.backend.entity.Category;
 import com.ifpr.backend.entity.Transaction;
 import com.ifpr.backend.entity.TransactionType;
@@ -517,5 +519,283 @@ class TransactionServiceTest {
                 .findByIdAndWallet_Owner_Id(999L, 3L);
 
         verifyNoInteractions(walletRepository, categoryRepository);
+    }
+
+    @Test
+    void shouldUpdateOwnedTransactionAndPreserveAuditFields() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        User originalAuthor = new User();
+        originalAuthor.setId(5L);
+
+        Wallet originalWallet = new Wallet();
+        originalWallet.setId(10L);
+        originalWallet.setOwner(owner);
+
+        Wallet destinationWallet = new Wallet();
+        destinationWallet.setId(11L);
+        destinationWallet.setOwner(owner);
+
+        Category originalCategory = new Category();
+        originalCategory.setId(20L);
+        originalCategory.setType(TransactionType.EXPENSE);
+
+        Category newCategory = new Category();
+        newCategory.setId(21L);
+        newCategory.setUser(owner);
+        newCategory.setType(TransactionType.INCOME);
+
+        LocalDateTime originalCreatedAt =
+                LocalDateTime.of(2026, 11, 20, 10, 30);
+
+        Transaction transaction = new Transaction();
+        transaction.setId(100L);
+        transaction.setDescription("Supermercado");
+        transaction.setAmount(new BigDecimal("189.90"));
+        transaction.setType(TransactionType.EXPENSE);
+        transaction.setTransactionDate(LocalDate.of(2026, 11, 20));
+        transaction.setWallet(originalWallet);
+        transaction.setCategory(originalCategory);
+        transaction.setCreatedBy(originalAuthor);
+        transaction.setCreatedAt(originalCreatedAt);
+
+        LocalDate newDate = LocalDate.of(2026, 11, 26);
+
+        TransactionUpdateDTO dto = new TransactionUpdateDTO(
+                "  Reembolso  ",
+                new BigDecimal("120.00"),
+                TransactionType.INCOME,
+                newDate,
+                11L,
+                21L
+        );
+
+        when(transactionRepository.findByIdAndWallet_Owner_Id(100L, 3L))
+                .thenReturn(Optional.of(transaction));
+
+        when(walletRepository.findByIdAndOwner_Id(11L, 3L))
+                .thenReturn(Optional.of(destinationWallet));
+
+        when(categoryRepository.findByIdAndUser_Id(21L, 3L))
+                .thenReturn(Optional.of(newCategory));
+
+        when(transactionRepository.save(transaction))
+                .thenReturn(transaction);
+
+        Optional<TransactionResponseDTO> response =
+                transactionService.updateOwned(100L, dto, owner);
+
+        assertTrue(response.isPresent());
+
+        TransactionResponseDTO result = response.get();
+
+        assertEquals(100L, result.id());
+        assertEquals("Reembolso", result.description());
+        assertEquals(new BigDecimal("120.00"), result.amount());
+        assertEquals(TransactionType.INCOME, result.type());
+        assertEquals(newDate, result.transactionDate());
+        assertEquals(11L, result.walletId());
+        assertEquals(21L, result.categoryId());
+        assertEquals(5L, result.createdById());
+        assertEquals(originalCreatedAt, result.createdAt());
+
+        assertSame(destinationWallet, transaction.getWallet());
+        assertSame(newCategory, transaction.getCategory());
+        assertSame(originalAuthor, transaction.getCreatedBy());
+        assertEquals(originalCreatedAt, transaction.getCreatedAt());
+
+        verify(transactionRepository)
+                .findByIdAndWallet_Owner_Id(100L, 3L);
+        verify(walletRepository).findByIdAndOwner_Id(11L, 3L);
+        verify(categoryRepository).findByIdAndUser_Id(21L, 3L);
+        verify(transactionRepository).save(transaction);
+    }
+
+    @Test
+    void shouldNotUpdateTransactionFromAnotherUsersWallet() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        TransactionUpdateDTO dto = new TransactionUpdateDTO(
+                "Alteração não autorizada",
+                new BigDecimal("120.00"),
+                TransactionType.EXPENSE,
+                LocalDate.of(2026, 11, 26),
+                10L,
+                20L
+        );
+
+        when(transactionRepository.findByIdAndWallet_Owner_Id(100L, 4L))
+                .thenReturn(Optional.empty());
+
+        Optional<TransactionResponseDTO> response =
+                transactionService.updateOwned(100L, dto, owner);
+
+        assertTrue(response.isEmpty());
+
+        verify(transactionRepository)
+                .findByIdAndWallet_Owner_Id(100L, 4L);
+
+        verifyNoInteractions(walletRepository, categoryRepository);
+        verify(transactionRepository, never())
+                .save(any(Transaction.class));
+    }
+
+    @Test
+    void shouldNotUpdateTransactionToAnotherUsersWallet() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        Wallet originalWallet = new Wallet();
+        originalWallet.setId(10L);
+        originalWallet.setOwner(owner);
+
+        Transaction transaction = new Transaction();
+        transaction.setId(100L);
+        transaction.setDescription("Supermercado");
+        transaction.setWallet(originalWallet);
+
+        TransactionUpdateDTO dto = new TransactionUpdateDTO(
+                "Movimentação indevida",
+                new BigDecimal("120.00"),
+                TransactionType.EXPENSE,
+                LocalDate.of(2026, 11, 26),
+                30L,
+                20L
+        );
+
+        when(transactionRepository.findByIdAndWallet_Owner_Id(100L, 3L))
+                .thenReturn(Optional.of(transaction));
+
+        when(walletRepository.findByIdAndOwner_Id(30L, 3L))
+                .thenReturn(Optional.empty());
+
+        Optional<TransactionResponseDTO> response =
+                transactionService.updateOwned(100L, dto, owner);
+
+        assertTrue(response.isEmpty());
+
+        assertEquals("Supermercado", transaction.getDescription());
+        assertSame(originalWallet, transaction.getWallet());
+
+        verify(transactionRepository)
+                .findByIdAndWallet_Owner_Id(100L, 3L);
+        verify(walletRepository).findByIdAndOwner_Id(30L, 3L);
+
+        verifyNoInteractions(categoryRepository);
+        verify(transactionRepository, never())
+                .save(any(Transaction.class));
+    }
+
+    @Test
+    void shouldNotUpdateTransactionWithAnotherUsersCategory() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        Wallet wallet = new Wallet();
+        wallet.setId(10L);
+        wallet.setOwner(owner);
+
+        Transaction transaction = new Transaction();
+        transaction.setId(100L);
+        transaction.setDescription("Supermercado");
+        transaction.setWallet(wallet);
+
+        TransactionUpdateDTO dto = new TransactionUpdateDTO(
+                "Alteração com categoria alheia",
+                new BigDecimal("120.00"),
+                TransactionType.EXPENSE,
+                LocalDate.of(2026, 11, 26),
+                10L,
+                30L
+        );
+
+        when(transactionRepository.findByIdAndWallet_Owner_Id(100L, 3L))
+                .thenReturn(Optional.of(transaction));
+
+        when(walletRepository.findByIdAndOwner_Id(10L, 3L))
+                .thenReturn(Optional.of(wallet));
+
+        when(categoryRepository.findByIdAndUser_Id(30L, 3L))
+                .thenReturn(Optional.empty());
+
+        Optional<TransactionResponseDTO> response =
+                transactionService.updateOwned(100L, dto, owner);
+
+        assertTrue(response.isEmpty());
+        assertEquals("Supermercado", transaction.getDescription());
+
+        verify(transactionRepository)
+                .findByIdAndWallet_Owner_Id(100L, 3L);
+        verify(walletRepository).findByIdAndOwner_Id(10L, 3L);
+        verify(categoryRepository).findByIdAndUser_Id(30L, 3L);
+
+        verify(transactionRepository, never())
+                .save(any(Transaction.class));
+    }
+
+    @Test
+    void shouldRejectUpdateWithIncompatibleCategoryType() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        Wallet wallet = new Wallet();
+        wallet.setId(10L);
+        wallet.setOwner(owner);
+
+        Category category = new Category();
+        category.setId(21L);
+        category.setUser(owner);
+        category.setType(TransactionType.INCOME);
+
+        Transaction transaction = new Transaction();
+        transaction.setId(100L);
+        transaction.setDescription("Supermercado");
+        transaction.setWallet(wallet);
+
+        TransactionUpdateDTO dto = new TransactionUpdateDTO(
+                "Compra alterada",
+                new BigDecimal("120.00"),
+                TransactionType.EXPENSE,
+                LocalDate.of(2026, 11, 26),
+                10L,
+                21L
+        );
+
+        when(transactionRepository.findByIdAndWallet_Owner_Id(100L, 3L))
+                .thenReturn(Optional.of(transaction));
+
+        when(walletRepository.findByIdAndOwner_Id(10L, 3L))
+                .thenReturn(Optional.of(wallet));
+
+        when(categoryRepository.findByIdAndUser_Id(21L, 3L))
+                .thenReturn(Optional.of(category));
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> transactionService.updateOwned(100L, dto, owner)
+        );
+
+        assertEquals(
+                "O tipo da transação deve corresponder ao tipo da categoria",
+                exception.getMessage()
+        );
+
+        assertEquals("Supermercado", transaction.getDescription());
+        assertSame(wallet, transaction.getWallet());
+
+        verify(transactionRepository)
+                .findByIdAndWallet_Owner_Id(100L, 3L);
+        verify(walletRepository).findByIdAndOwner_Id(10L, 3L);
+        verify(categoryRepository).findByIdAndUser_Id(21L, 3L);
+
+        verify(transactionRepository, never())
+                .save(any(Transaction.class));
     }
 }

@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ifpr.backend.dto.TransactionCreationDTO;
 import com.ifpr.backend.dto.TransactionResponseDTO;
+import com.ifpr.backend.dto.TransactionUpdateDTO;
 import com.ifpr.backend.entity.Category;
 import com.ifpr.backend.entity.Transaction;
 import com.ifpr.backend.entity.User;
@@ -135,5 +136,54 @@ public class TransactionService {
                         transaction.getCreatedBy().getId(),
                         transaction.getCreatedAt()
                 ));
+    }
+
+    @Transactional
+    public Optional<TransactionResponseDTO> updateOwned(Long id, TransactionUpdateDTO dto, User owner) {
+
+        Optional<Transaction> existingTransaction = transactionRepository.findByIdAndWallet_Owner_Id(id, owner.getId());
+
+        if (existingTransaction.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Optional<Wallet> destinationWallet = walletRepository.findByIdAndOwner_Id(dto.walletId(), owner.getId());
+
+        if (destinationWallet.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Optional<Category> category = categoryRepository.findByIdAndUser_Id(dto.categoryId(), owner.getId());
+
+        if (category.isEmpty()) {
+            return Optional.empty();
+        }
+
+        if (category.get().getType() != dto.type()) {
+            throw new BusinessException("O tipo da transação deve corresponder ao tipo da categoria");
+        }
+
+        Transaction transaction = existingTransaction.get();
+
+        transaction.setDescription(dto.description().trim());
+        transaction.setAmount(dto.amount());
+        transaction.setType(dto.type());
+        transaction.setTransactionDate(dto.transactionDate());
+        transaction.setWallet(destinationWallet.get());
+        transaction.setCategory(category.get());
+
+        Transaction savedTransaction = transactionRepository.save(transaction);
+
+        return Optional.of(new TransactionResponseDTO(
+                savedTransaction.getId(),
+                savedTransaction.getDescription(),
+                savedTransaction.getAmount(),
+                savedTransaction.getType(),
+                savedTransaction.getTransactionDate(),
+                savedTransaction.getWallet().getId(),
+                savedTransaction.getCategory().getId(),
+                savedTransaction.getCreatedBy().getId(),
+                savedTransaction.getCreatedAt()
+        ));
     }
 }
