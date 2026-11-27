@@ -194,4 +194,53 @@ class TransactionControllerTest {
 
         verify(transactionService).listOwnedByWallet(10L, owner);
     }
+
+    @Test
+    void shouldFindOwnedTransactionAndReturn200() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        TransactionResponseDTO expectedResponse =
+                new TransactionResponseDTO(
+                        100L,
+                        "Supermercado",
+                        new BigDecimal("189.90"),
+                        TransactionType.EXPENSE,
+                        LocalDate.of(2026, 11, 26),
+                        10L,
+                        20L,
+                        3L,
+                        LocalDateTime.of(2026, 11, 26, 15, 30)
+                );
+
+        when(transactionService.findOwnedById(100L, owner))
+                .thenReturn(Optional.of(expectedResponse));
+
+        ResponseEntity<TransactionResponseDTO> result =
+                transactionController.findById(100L, owner);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        assertSame(expectedResponse, result.getBody());
+
+        verify(transactionService).findOwnedById(100L, owner);
+    }
+
+    @Test
+    void shouldReturn404WhenTransactionIsNotAccessible() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        when(transactionService.findOwnedById(100L, owner))
+                .thenReturn(Optional.empty());
+
+        ResponseEntity<TransactionResponseDTO> result =
+                transactionController.findById(100L, owner);
+
+        assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
+        assertNull(result.getBody());
+
+        verify(transactionService).findOwnedById(100L, owner);
+    }
 }
