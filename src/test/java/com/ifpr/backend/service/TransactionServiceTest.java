@@ -2,6 +2,7 @@
 package com.ifpr.backend.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -797,5 +798,57 @@ class TransactionServiceTest {
 
         verify(transactionRepository, never())
                 .save(any(Transaction.class));
+    }
+
+    @Test
+    void shouldDeleteTransactionFromOwnedWallet() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        Wallet wallet = new Wallet();
+        wallet.setId(10L);
+        wallet.setOwner(owner);
+
+        Transaction transaction = new Transaction();
+        transaction.setId(100L);
+        transaction.setWallet(wallet);
+
+        when(transactionRepository.findByIdAndWallet_Owner_Id(100L, 3L))
+                .thenReturn(Optional.of(transaction));
+
+        boolean deleted =
+                transactionService.deleteOwned(100L, owner);
+
+        assertTrue(deleted);
+
+        verify(transactionRepository)
+                .findByIdAndWallet_Owner_Id(100L, 3L);
+        verify(transactionRepository).delete(transaction);
+
+        verifyNoInteractions(walletRepository, categoryRepository);
+    }
+
+    @Test
+    void shouldNotDeleteTransactionFromAnotherUsersWallet() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        when(transactionRepository.findByIdAndWallet_Owner_Id(100L, 4L))
+                .thenReturn(Optional.empty());
+
+        boolean deleted =
+                transactionService.deleteOwned(100L, owner);
+
+        assertFalse(deleted);
+
+        verify(transactionRepository)
+                .findByIdAndWallet_Owner_Id(100L, 4L);
+
+        verify(transactionRepository, never())
+                .delete(any(Transaction.class));
+
+        verifyNoInteractions(walletRepository, categoryRepository);
     }
 }

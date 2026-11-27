@@ -186,4 +186,18 @@ public class TransactionService {
                 savedTransaction.getCreatedAt()
         ));
     }
+
+    @Transactional
+    public boolean deleteOwned(Long id, User owner) {
+
+        Optional<Transaction> transaction = transactionRepository.findByIdAndWallet_Owner_Id(id, owner.getId());
+
+        if (transaction.isEmpty()) {
+            return false;
+        }
+
+        transactionRepository.delete(transaction.get());
+
+        return true;
+    }
 }
