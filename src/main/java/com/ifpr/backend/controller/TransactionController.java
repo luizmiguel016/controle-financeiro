@@ -9,6 +9,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ifpr.backend.dto.TransactionCreationDTO;
 import com.ifpr.backend.dto.TransactionResponseDTO;
+import com.ifpr.backend.dto.TransactionUpdateDTO;
 import com.ifpr.backend.entity.User;
 import com.ifpr.backend.service.TransactionService;
 
@@ -73,4 +75,18 @@ public class TransactionController {
         return ResponseEntity.ok(response.get());
     }
     
+    @PutMapping("/{id}")
+    public ResponseEntity<TransactionResponseDTO> update(
+            @PathVariable Long id,
+            @Valid @RequestBody TransactionUpdateDTO request,
+            @AuthenticationPrincipal User owner) {
+
+        Optional<TransactionResponseDTO> response = transactionService.updateOwned(id, request, owner);
+
+        if (response.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(response.get());
+    }
 }

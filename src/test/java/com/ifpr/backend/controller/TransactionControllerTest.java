@@ -24,6 +24,7 @@ import org.springframework.http.ResponseEntity;
 
 import com.ifpr.backend.dto.TransactionCreationDTO;
 import com.ifpr.backend.dto.TransactionResponseDTO;
+import com.ifpr.backend.dto.TransactionUpdateDTO;
 import com.ifpr.backend.entity.TransactionType;
 import com.ifpr.backend.entity.User;
 import com.ifpr.backend.service.TransactionService;
@@ -242,5 +243,86 @@ class TransactionControllerTest {
         assertNull(result.getBody());
 
         verify(transactionService).findOwnedById(100L, owner);
+    }
+
+    @Test
+    void shouldUpdateOwnedTransactionAndReturn200() {
+
+        User owner = new User();
+        owner.setId(3L);
+
+        LocalDate transactionDate =
+                LocalDate.of(2026, 11, 26);
+
+        LocalDateTime originalCreatedAt =
+                LocalDateTime.of(2026, 11, 20, 10, 30);
+
+        TransactionUpdateDTO request =
+                new TransactionUpdateDTO(
+                        "Reembolso",
+                        new BigDecimal("120.00"),
+                        TransactionType.INCOME,
+                        transactionDate,
+                        11L,
+                        21L
+                );
+
+        TransactionResponseDTO expectedResponse =
+                new TransactionResponseDTO(
+                        100L,
+                        "Reembolso",
+                        new BigDecimal("120.00"),
+                        TransactionType.INCOME,
+                        transactionDate,
+                        11L,
+                        21L,
+                        5L,
+                        originalCreatedAt
+                );
+
+        when(transactionService.updateOwned(100L, request, owner))
+                .thenReturn(Optional.of(expectedResponse));
+
+        ResponseEntity<TransactionResponseDTO> result =
+                transactionController.update(100L, request, owner);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        assertSame(expectedResponse, result.getBody());
+
+        assertEquals(5L, result.getBody().createdById());
+        assertEquals(
+                originalCreatedAt,
+                result.getBody().createdAt()
+        );
+
+        verify(transactionService).updateOwned(100L, request, owner);
+    }
+
+    @Test
+    void shouldReturn404WhenUpdatingInaccessibleTransaction() {
+
+        User owner = new User();
+        owner.setId(4L);
+
+        TransactionUpdateDTO request =
+                new TransactionUpdateDTO(
+                        "Alteração não autorizada",
+                        new BigDecimal("120.00"),
+                        TransactionType.EXPENSE,
+                        LocalDate.of(2026, 11, 26),
+                        10L,
+                        20L
+                );
+
+        when(transactionService.updateOwned(100L, request, owner))
+                .thenReturn(Optional.empty());
+
+        ResponseEntity<TransactionResponseDTO> result =
+                transactionController.update(100L, request, owner);
+
+        assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
+        assertNull(result.getBody());
+
+        verify(transactionService).updateOwned(100L, request, owner);
     }
 }
